@@ -3,6 +3,32 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# Django media и статика
+media/
+staticfiles/
+
+# Файлы базы данных (если случайно SQLite используется)
+db.sqlite3
+db.sqlite3-journal
+
+# Секреты и конфиги
+.env
+local_settings.py
+
+# PostgreSQL temporary files
+*.psql
+
+# PyCharm project (если вдруг кто-то откроет проект в PyCharm)
+.idea/
+
+# VSCode settings (если кто-то пользуется VSCode)
+.vscode/
+
+# Windows Thumbs
+Thumbs.db
+desktop.ini
+
+
 # C extensions
 *.so
 
