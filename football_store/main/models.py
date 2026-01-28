@@ -213,12 +213,12 @@ class CartItem(models.Model):
     def total_price(self):
         return self.quantity * self.product.price
 
-
     def __str__(self):
         return self.product.name
 
     class Meta:
         verbose_name = "Позиция в корзине"
+        verbose_name_plural = "Позиция в корзине"
         ordering = ["-created_at"]
         db_table = 'cart_item'
         unique_together = ('cart', 'product')
@@ -277,7 +277,6 @@ class Order(models.Model):
             models.Index(fields=['created_at']),
         ]
 
-
 class OrderItem(models.Model):
     """Конкретный товар в конкретном заказе."""
     order = models.ForeignKey(
@@ -307,6 +306,7 @@ class OrderItem(models.Model):
 
     class Meta:
         verbose_name = "Позиция заказа"
+        verbose_name_plural = "Позиция заказов"
         db_table = 'order_item'
 
 
