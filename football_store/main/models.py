@@ -4,11 +4,15 @@ from django.utils.text import slugify
 from django.urls import reverse
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.conf import settings
+from .validators import *
 
 class Category(models.Model):
+    """Категории товаров, например: "Футболки", "Мячи", "Аксессуары"."""
     title = models.CharField(
         verbose_name='Название',
-        max_length=255
+        max_length=255,
+        null=False,
+        blank=False
     )
     slug = models.SlugField(
         verbose_name='URL',
@@ -47,16 +51,25 @@ class Category(models.Model):
         verbose_name_plural = "Категории"
         ordering = ["-created_at"]
         db_table = 'category'
+        """Индекс — это структура данных в базе, которая ускоряет поиск по указанным полям.
+        Представь: у тебя есть книга, и тебе нужно найти все упоминания слова "Django".
+        Без индекса придётся читать каждую страницу книги.
+        С индексом — как если бы у книги был алфавитный указатель слов, и поиск происходит мгновенно.
+        Теперь поиск Product.objects.filter(slug='nike-shoes') будет гораздо быстрее, особенно если таблица большая.
+        # с индексом:
+        Product.objects.filter(title='Nike')  # база использует индекс, ищет быстро"""
         indexes = [
             models.Index(fields=['slug']),
             models.Index(fields=['title']),
         ]
 
-
 class Product(models.Model):
+    """Конкретный товар, который продаётся в магазине."""
     name = models.CharField(
         verbose_name='Название',
-        max_length=255
+        max_length=255,
+        null=False,
+        blank=False
     )
     slug = models.SlugField(
         verbose_name='URL',
@@ -70,11 +83,12 @@ class Product(models.Model):
     price = models.DecimalField(
         verbose_name='Цена',
         max_digits=13,
-        decimal_places=2
+        decimal_places=2,
+        validators=[validate_price]
     )
     quantity = models.IntegerField(
         verbose_name='Товар на складе',
-        validators=[MinValueValidator(1)]
+        validators=[validate_quantity]
     )
     category = models.ForeignKey(
         Category,
@@ -100,6 +114,13 @@ class Product(models.Model):
         auto_now=True,
         verbose_name='Дата обновления'
     )
+
+    def clean(self):
+        if self.is_published and not self.image:
+            raise ValidationError({
+                'image': 'Для публикации продукта обязательно нужно загрузить фото.'
+            })
+
 
     def get_absolute_url(self):
         return reverse('product', kwargs={'slug': self.slug})
@@ -129,6 +150,7 @@ class Product(models.Model):
         ]
 
 class Cart(models.Model):
+    """Корзина пользователя — каждый пользователь имеет одну корзину."""
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -155,6 +177,7 @@ class Cart(models.Model):
         db_table = 'cart'
 
 class CartItem(models.Model):
+    """Одна строка в корзине, содержит товар и его количество."""
     cart = models.ForeignKey(
         Cart,
         on_delete=models.CASCADE,
@@ -176,9 +199,20 @@ class CartItem(models.Model):
         verbose_name='Продукт',
     )
     quantity = models.IntegerField(
-        verbose_name='Товар на складе',
+        verbose_name='Количество товара',
         validators=[MinValueValidator(1)]
     )
+
+    def clean(self):
+        if self.quantity > self.product.quantity:
+            raise ValidationError({
+                'quantity': 'Количество товаров в корзине не может быть больше количества товара на складе'
+            })
+
+    @property
+    def total_price(self):
+        return self.quantity * self.product.price
+
 
     def __str__(self):
         return self.product.name
@@ -191,6 +225,7 @@ class CartItem(models.Model):
 
 
 class Order(models.Model):
+    """Заказ, который пользователь оформляет."""
     ORDER_CHOISE = (
         ('New', 'Новый'),
         ('Processing', 'В процессе'),
@@ -213,7 +248,7 @@ class Order(models.Model):
     total_price = models.DecimalField(
         max_digits=13,
         decimal_places=2,
-        verbose_name='Цена'
+        verbose_name='Цена',
     )
     created_at = models.DateTimeField(
         verbose_name='Дата создания',
@@ -244,6 +279,7 @@ class Order(models.Model):
 
 
 class OrderItem(models.Model):
+    """Конкретный товар в конкретном заказе."""
     order = models.ForeignKey(
         Order,
         on_delete=models.CASCADE,
