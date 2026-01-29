@@ -1,11 +1,5 @@
 from django.contrib import admin
-from .models import Category, Product, Cart, CartItem, Order, OrderItem
-
-class CartItemInline(admin.TabularInline):
-    model = CartItem
-    extra = 1
-    readonly_fields = ('total_price',)
-    autocomplete_fields = ('product',)
+from .models import Category, Product, Order, OrderItem
 
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
@@ -55,18 +49,6 @@ class ProductAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('name',)}
     autocomplete_fields = ('category',)
 
-@admin.register(Cart)
-class CartAdmin(admin.ModelAdmin):
-    list_display = (
-        'id',
-        'user',
-        'created_at',
-        'updated_at'
-    )
-    search_fields = ('user__username',)
-    inlines = [CartItemInline]
-    autocomplete_fields = ('user',)
-
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     list_display = (
@@ -79,31 +61,10 @@ class OrderAdmin(admin.ModelAdmin):
     )
     list_editable = ('status',)
     readonly_fields = ('id',)
-    list_filter = (
-        'status',
-        'created_at'
-    )
-    search_fields = (
-        'user__username',
-        'id'
-    )
+    list_filter = ('status', 'created_at')
+    search_fields = ('user__username', 'id')
     inlines = [OrderItemInline]
     autocomplete_fields = ('user',)
-
-@admin.register(CartItem)
-class CartItemAdmin(admin.ModelAdmin):
-    list_display = (
-        'id',
-        'cart',
-        'product',
-        'quantity',
-        'total_price',
-        'created_at'
-    )
-    list_filter = ('cart',)
-    readonly_fields = ('id', 'total_price')
-    search_fields = ('product__name',)
-    autocomplete_fields = ('cart', 'product')
 
 @admin.register(OrderItem)
 class OrderItemAdmin(admin.ModelAdmin):
