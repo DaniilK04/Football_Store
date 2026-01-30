@@ -5,6 +5,7 @@ from django.urls import reverse
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.conf import settings
 from .validators import *
+from django.db.models import Sum, F, DecimalField
 
 class Category(models.Model):
     """Категории товаров, например: "Футболки", "Мячи", "Аксессуары"."""
@@ -175,6 +176,7 @@ class Order(models.Model):
         max_digits=13,
         decimal_places=2,
         verbose_name='Цена',
+        default=0
     )
     created_at = models.DateTimeField(
         verbose_name='Дата создания',
@@ -189,6 +191,16 @@ class Order(models.Model):
         through='OrderItem',
         related_name='orders'
     )
+    def recalculate_total_price(self):
+        total = self.order_items.aggregate(
+            total=Sum(
+                F('price') * F('quantity'),
+                output_field=DecimalField()
+            )
+        )['total'] or 0
+
+        self.total_price = total
+        self.save(update_fields=['total_price'])
 
     def __str__(self):
         return f"Заказ #{self.pk} пользователя {self.user.username} ({self.status})"
@@ -227,6 +239,10 @@ class OrderItem(models.Model):
         decimal_places=2
     )
 
+    @property
+    def total_price(self):
+        return self.price * self.quantity
+
     def __str__(self):
         return f"{self.product.name} x {self.quantity}"
 
@@ -234,6 +250,7 @@ class OrderItem(models.Model):
         verbose_name = "Позиция заказа"
         verbose_name_plural = "Позиция заказов"
         db_table = 'order_item'
+        unique_together = ('order', 'product')
 
 
 

@@ -54,18 +54,28 @@ class ProductSerializer(serializers.ModelSerializer):
         return value
 
 
-class CartSerializer(serializers.ModelSerializer):
+class OrderSerializer(serializers.ModelSerializer):
+    total_price = serializers.DecimalField(
+        source='total_price',
+        max_digits=13,
+        decimal_places=2,
+        read_only=True
+    )
+
     class Meta:
-        model = Cart
-        fields = ['id', 'user', 'created_at', 'updated_at']
-        read_only_fields = ('id', 'created_at', 'updated_at')
+        model = Order
+        fields = ['id', 'user', 'status',
+                  'total_price', 'created_at',
+                  'updated_at', 'items']
+        read_only_fields = ('id', 'user',
+                            'created_at',
+                            'updated_at', 'total_price',)
 
     def create(self, validated_data):
         user = self.context['request'].user
-        return Cart.objects.create(user=user, **validated_data)
+        return Order.objects.create(user=user, **validated_data)
 
 
-class CartItemSerializer(serializers.ModelSerializer):
-    pass
+
 
 
