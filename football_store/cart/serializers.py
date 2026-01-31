@@ -1,65 +1,70 @@
 from rest_framework import serializers
-from .models import *
-
-
-class CartSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Cart
-        fields = ['id', 'user', 'created_at', 'updated_at']
-        read_only_fields = ('id', 'created_at', 'updated_at')
-
-    def create(self, validated_data):
-        user = self.context['request'].user
-        return Cart.objects.create(user=user, **validated_data)
+from django.db import transaction
+from .models import Cart, CartItem
+from main.models import Product
 
 
 class CartItemSerializer(serializers.ModelSerializer):
-    total_price = serializers.DecimalField(
-        max_digits=13,
-        decimal_places=2,
-        read_only=True,
-        source='total_price'
+    product = serializers.SlugRelatedField(
+        slug_field='slug',
+        queryset=Product.objects.filter(is_published=True)
     )
+    total_price = serializers.DecimalField(max_digits=13, decimal_places=2, read_only=True)
 
     class Meta:
         model = CartItem
-        fields = ['id', 'created_at', 'updated_at', 'product', 'quantity', 'total_price']
-        read_only_fields = ('id', 'created_at', 'updated_at', 'total_price')
+        fields = ['id', 'product', 'quantity', 'price', 'total_price', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'price', 'total_price', 'created_at', 'updated_at']
+
+    def validate_quantity(self, value):
+        if value < 1:
+            raise serializers.ValidationError("Количество должно быть ≥ 1")
+        return value
 
     def create(self, validated_data):
         request = self.context['request']
         user = request.user
-        cart = user.user_cart  # корзина текущего пользователя
-
         product = validated_data['product']
         quantity = validated_data['quantity']
 
-        cart_item, created = CartItem.objects.get_or_create(
-            cart=cart,
-            product=product,
-            defaults={'quantity': quantity}
-        )
+        # Ленивое создание корзины
+        cart, _ = Cart.objects.get_or_create(user=user)
 
-        if not created:
-            new_quantity = cart_item.quantity + quantity
+        with transaction.atomic():
+            # Блокируем строку продукта, чтобы избежать race condition
+            product = Product.objects.select_for_update().get(pk=product.pk)
 
-            if new_quantity > product.quantity:
+            if product.quantity < quantity:
                 raise serializers.ValidationError({
-                    'quantity': 'Общее количество товара в корзине превышает количество на складе'
+                    'quantity': f'На складе осталось только {product.quantity} шт.'
                 })
 
-            cart_item.quantity = new_quantity
-            cart_item.save()
+            cart_item, created = CartItem.objects.get_or_create(
+                cart=cart,
+                product=product,
+                defaults={
+                    'quantity': quantity,
+                    'price': product.price
+                }
+            )
+
+            if not created:
+                new_quantity = cart_item.quantity + quantity
+                if new_quantity > product.quantity:
+                    raise serializers.ValidationError({
+                        'quantity': f'Нельзя добавить: всего будет {new_quantity}, а на складе {product.quantity}'
+                    })
+                cart_item.quantity = new_quantity
+                cart_item.save()
 
         return cart_item
 
-    def validate(self, attrs):
-        product = attrs.get('product')
-        quantity = attrs.get('quantity')
 
-        if quantity > product.quantity:
-            raise serializers.ValidationError({
-                'quantity': 'Количество товаров в корзине не может быть больше количества на складе'
-            })
+class CartDetailSerializer(serializers.ModelSerializer):
+    items = CartItemSerializer(many=True, read_only=True)
+    total_price = serializers.DecimalField(max_digits=13, decimal_places=2, read_only=True)
 
-        return attrs
+    class Meta:
+        model = Cart
+        fields = ['id', 'total_price', 'items', 'created_at', 'updated_at']
+        read_only_fields = fields

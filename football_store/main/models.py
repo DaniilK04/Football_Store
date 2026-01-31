@@ -1,19 +1,19 @@
-from django.db import models
+from django.db import models, transaction
 from django.contrib.auth.models import User
 from django.utils.text import slugify
 from django.urls import reverse
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MinValueValidator
 from django.conf import settings
-from .validators import *
 from django.db.models import Sum, F, DecimalField
+from decimal import Decimal
+from rest_framework.exceptions import ValidationError
+from .validators import validate_price, validate_quantity  # предполагаем, что они есть
+
 
 class Category(models.Model):
-    """Категории товаров, например: "Футболки", "Мячи", "Аксессуары"."""
     title = models.CharField(
         verbose_name='Название',
-        max_length=255,
-        null=False,
-        blank=False
+        max_length=255
     )
     slug = models.SlugField(
         verbose_name='URL',
@@ -52,34 +52,27 @@ class Category(models.Model):
         verbose_name_plural = "Категории"
         ordering = ["-created_at"]
         db_table = 'category'
-        """Индекс — это структура данных в базе, которая ускоряет поиск по указанным полям.
-        Представь: у тебя есть книга, и тебе нужно найти все упоминания слова "Django".
-        Без индекса придётся читать каждую страницу книги.
-        С индексом — как если бы у книги был алфавитный указатель слов, и поиск происходит мгновенно.
-        Теперь поиск Product.objects.filter(slug='nike-shoes') будет гораздо быстрее, особенно если таблица большая.
-        # с индексом:
-        Product.objects.filter(title='Nike')  # база использует индекс, ищет быстро"""
         indexes = [
             models.Index(fields=['slug']),
             models.Index(fields=['title']),
         ]
 
+
 class Product(models.Model):
-    """Конкретный товар, который продаётся в магазине."""
     name = models.CharField(
         verbose_name='Название',
-        max_length=255,
-        null=False,
-        blank=False
+        max_length=255
     )
-    slug = models.SlugField(
+    slug = (models.SlugField
+            (
         verbose_name='URL',
         max_length=255,
         blank=True,
         unique=True
-    )
+    ))
     description = models.TextField(
         verbose_name='Описание',
+        blank=True
     )
     price = models.DecimalField(
         verbose_name='Цена',
@@ -87,25 +80,27 @@ class Product(models.Model):
         decimal_places=2,
         validators=[validate_price]
     )
-    quantity = models.IntegerField(
+    quantity = models.PositiveIntegerField(
         verbose_name='Товар на складе',
+        default=0,
         validators=[validate_quantity]
     )
     category = models.ForeignKey(
         Category,
         on_delete=models.CASCADE,
         related_name="products",
-        db_index=True,
-        verbose_name='Категория',
+        db_index=True
     )
     image = models.ImageField(
         upload_to='photos/%Y/%m/%d/',
-        verbose_name="Фотографии"
+        verbose_name="Фотография",
+        blank=True,
+        null=True
     )
     is_published = models.BooleanField(
         verbose_name='Опубликовано',
-        default=True,
-        db_index=True
+        default=False
+        , db_index=True
     )
     created_at = models.DateTimeField(
         verbose_name='Дата создания',
@@ -118,16 +113,9 @@ class Product(models.Model):
 
     def clean(self):
         if self.is_published and not self.image:
-            raise ValidationError({
-                'image': 'Для публикации продукта обязательно нужно загрузить фото.'
-            })
-
-
-    def get_absolute_url(self):
-        return reverse('product', kwargs={'slug': self.slug})
-
-    def __str__(self):
-        return self.name
+            raise ValidationError(
+                {'image': 'Для публикации продукта обязательно нужно загрузить фото.'}
+            )
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -140,6 +128,12 @@ class Product(models.Model):
             self.slug = slug
         super().save(*args, **kwargs)
 
+    def get_absolute_url(self):
+        return reverse('product', kwargs={'slug': self.slug})
+
+    def __str__(self):
+        return self.name
+
     class Meta:
         verbose_name = "Продукт"
         verbose_name_plural = "Продукты"
@@ -148,62 +142,52 @@ class Product(models.Model):
         indexes = [
             models.Index(fields=['slug']),
             models.Index(fields=['name']),
+            models.Index(fields=['is_published']),
         ]
 
 
 class Order(models.Model):
-    """Заказ, который пользователь оформляет."""
-    ORDER_CHOISE = (
-        ('New', 'Новый'),
-        ('Processing', 'В процессе'),
-        ('Shipped', 'Отправлено'),
-        ('Completed', 'Завершено'),
-        ('Canceled', 'Отменено')
+    ORDER_STATUS = (
+        ('new', 'Новый'),
+        ('processing', 'В обработке'),
+        ('shipped', 'Отправлен'),
+        ('completed', 'Завершён'),
+        ('canceled', 'Отменён'),
     )
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='user_order',
-        db_index=True,
-        verbose_name='Пользователь',
+        related_name='orders',
+        verbose_name='Пользователь'
     )
     status = models.CharField(
         verbose_name='Статус',
-        choices=ORDER_CHOISE,
-        default='Processing',
+        max_length=20,
+        choices=ORDER_STATUS,
+        default='new'
     )
-    total_price = models.DecimalField(
-        max_digits=13,
-        decimal_places=2,
-        verbose_name='Цена',
-        default=0
-    )
-    created_at = models.DateTimeField(
-        verbose_name='Дата создания',
-        auto_now_add=True
-    )
-    updated_at = models.DateTimeField(
-        auto_now=True,
-        verbose_name='Дата обновления'
-    )
+    created_at = models.DateTimeField(verbose_name='Дата создания', auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Дата обновления')
+
     items = models.ManyToManyField(
         Product,
         through='OrderItem',
         related_name='orders'
     )
-    def recalculate_total_price(self):
-        total = self.order_items.aggregate(
+
+    @property
+    def total_price(self) -> Decimal:
+        result = self.order_items.aggregate(
             total=Sum(
                 F('price') * F('quantity'),
-                output_field=DecimalField()
+                output_field=DecimalField(max_digits=13, decimal_places=2)
             )
-        )['total'] or 0
-
-        self.total_price = total
-        self.save(update_fields=['total_price'])
+        )['total']
+        return result if result is not None else Decimal('0.00')
 
     def __str__(self):
-        return f"Заказ #{self.pk} пользователя {self.user.username} ({self.status})"
+        return f"Заказ #{self.pk} — {self.user.username} ({self.get_status_display()})"
 
     class Meta:
         verbose_name = "Заказ"
@@ -213,45 +197,39 @@ class Order(models.Model):
         indexes = [
             models.Index(fields=['status']),
             models.Index(fields=['created_at']),
+            models.Index(fields=['user']),
         ]
 
 class OrderItem(models.Model):
-    """Конкретный товар в конкретном заказе."""
     order = models.ForeignKey(
         Order,
         on_delete=models.CASCADE,
-        related_name="order_items",
-        verbose_name='Заказ',
+        related_name="order_items"
     )
     product = models.ForeignKey(
         Product,
         on_delete=models.CASCADE,
-        related_name='product_order',
-        verbose_name='Продукт',
+        related_name='order_items'
     )
-    quantity = models.IntegerField(
+    quantity = models.PositiveIntegerField(
         verbose_name='Количество',
         validators=[MinValueValidator(1)]
     )
     price = models.DecimalField(
-        verbose_name='Цена',
+        verbose_name='Цена на момент заказа',
         max_digits=13,
         decimal_places=2
     )
 
-    @property
-    def total_price(self):
-        return self.price * self.quantity
-
-    def __str__(self):
-        return f"{self.product.name} x {self.quantity}"
-
     class Meta:
         verbose_name = "Позиция заказа"
-        verbose_name_plural = "Позиция заказов"
+        verbose_name_plural = "Позиции заказов"
         db_table = 'order_item'
         unique_together = ('order', 'product')
 
+    @property
+    def total_price(self) -> Decimal:
+        return self.price * Decimal(self.quantity)
 
-
-
+    def __str__(self):
+        return f"{self.product.name} × {self.quantity}"
