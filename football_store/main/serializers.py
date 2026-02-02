@@ -61,7 +61,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
 # ─── Для чтения ────────────────────────────────────────────────
 
-class OrderItemReadSerializer(serializers.ModelSerializer):
+class OrderItemDetailSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
     product_slug = serializers.CharField(source='product.slug', read_only=True)
     total_price = serializers.DecimalField(max_digits=13, decimal_places=2, read_only=True)
@@ -71,8 +71,8 @@ class OrderItemReadSerializer(serializers.ModelSerializer):
         fields = ['id', 'product_name', 'product_slug', 'quantity', 'price', 'total_price']
 
 
-class OrderDetailSerializer(serializers.ModelSerializer):
-    items = OrderItemReadSerializer(many=True, read_only=True)
+class OrderReadSerializer(serializers.ModelSerializer):
+    items = OrderItemDetailSerializer(many=True, read_only=True)
     total_price = serializers.DecimalField(max_digits=13, decimal_places=2, read_only=True, source='total_price')
     username = serializers.CharField(source='user.username', read_only=True)
 

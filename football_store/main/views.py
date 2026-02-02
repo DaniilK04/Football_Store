@@ -1,12 +1,12 @@
 from django.shortcuts import render, get_object_or_404
+from django.template.context_processors import request
 from rest_framework.viewsets import *
 from rest_framework import *
-from rest_framework.permissions import AllowAny, IsAdminUser
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import *
 from .models import *
 from .serializers import *
-
 
 class CategoryViewSet(ModelViewSet):
     """Класс для категорий товаров, для всех и для одной категории"""
@@ -56,5 +56,42 @@ class ProductViewSet(ModelViewSet):
         if self.action in ['list', 'retrieve']:
             return [AllowAny()]
         return [IsAdminUser()]
+
+
+class OrderViewSetRead(ModelViewSet):
+    filter_backends = [
+        DjangoFilterBackend,
+        SearchFilter,
+        OrderingFilter
+    ]
+    search_fields = ['order_items__product__name']  # поиск по названию
+    ordering_fields = ['status']  # по каким полям можно сортировать
+    ordering = ['-created_at']  # по умолчанию новые сверху
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        """«Когда я получаю заказы (Order), сразу заранее подтяни
+            все OrderItem этого заказа и связанные с ними Product
+            одним дополнительным запросом, а не по одному на каждый объект».
+            Что значит 'order_items__product'
+            Разберём по цепочке:
+            Order
+             └── order_items (related_name у OrderItem)
+                  └── product (ForeignKey на Product)
+            order_items — связь Order → OrderItem
+            __product — связь OrderItem → Product"""
+        return Order.objects.filter(user=self.request.user).prefetch_related(
+            'order_items__product')
+
+    def get_serializer_class(self):
+        # Можно разделить на лёгкий список и полный детальный просмотр
+        if self.action == 'retrieve':
+            # Если хотите более подробный вывод — создайте OrderDetailSerializer
+            return OrderReadSerializer
+        # для списка — можно оставить тот же или сделать облегчённый вариант
+        return OrderReadSerializer
+
+
+
 
 
