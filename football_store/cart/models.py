@@ -14,8 +14,14 @@ class Cart(models.Model):
         related_name='cart',           # более читаемое имя
         verbose_name='Пользователь',
     )
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Создано')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
+    created_at = (models.DateTimeField
+                  (auto_now_add=True,
+                   verbose_name='Создано'
+                   ))
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Обновлено'
+    )
 
     def __str__(self):
         return f"Корзина {self.user.username}"

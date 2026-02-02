@@ -99,8 +99,8 @@ class Product(models.Model):
     )
     is_published = models.BooleanField(
         verbose_name='Опубликовано',
-        default=False
-        , db_index=True
+        default=True,
+        db_index=True
     )
     created_at = models.DateTimeField(
         verbose_name='Дата создания',

@@ -27,7 +27,6 @@ class ProductSerializer(serializers.ModelSerializer):
         queryset=Category.objects.all(),
         required=False
     )
-
     class Meta:
         model = Product
         fields = [
@@ -100,7 +99,10 @@ class OrderItemCreateSerializer(serializers.ModelSerializer):
 
 
 class OrderCreateSerializer(serializers.ModelSerializer):
-    items = OrderItemCreateSerializer(many=True, write_only=True)
+    items = OrderItemCreateSerializer(
+        many=True,
+        write_only=True
+    )
 
     class Meta:
         model = Order

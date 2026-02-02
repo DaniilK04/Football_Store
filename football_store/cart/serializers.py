@@ -9,7 +9,11 @@ class CartItemSerializer(serializers.ModelSerializer):
         slug_field='slug',
         queryset=Product.objects.filter(is_published=True)
     )
-    total_price = serializers.DecimalField(max_digits=13, decimal_places=2, read_only=True)
+    total_price = serializers.DecimalField(
+        max_digits=13,
+        decimal_places=2,
+        read_only=True
+    )
 
     class Meta:
         model = CartItem
@@ -28,10 +32,20 @@ class CartItemSerializer(serializers.ModelSerializer):
         quantity = validated_data['quantity']
 
         # Ленивое создание корзины
+        # Если у человека ещё нет корзины — создаём её автоматически.
         cart, _ = Cart.objects.get_or_create(user=user)
 
+        """ transaction.atomic в Django — это инструмент (декоратор или контекстный менеджер), 
+        обеспечивающий атомарность группы запросов к базе данных. 
+        Он гарантирует, что все операции внутри блока выполнятся успешно, либо, 
+        если произойдет ошибка (исключение), все изменения откатятся назад (rollback), 
+        сохраняя целостность данных"""
         with transaction.atomic():
             # Блокируем строку продукта, чтобы избежать race condition
+            """это метод QuerySet, используемый для блокировки строк базы данных до завершения транзакции. 
+            Он предотвращает конкурентное изменение данных другими запросами,
+            обеспечивая целостность при обновлении (SELECT ... FOR UPDATE), 
+            пока текущая транзакция не будет зафиксирована (COMMIT) или откатана (ROLLBACK). """
             product = Product.objects.select_for_update().get(pk=product.pk)
 
             if product.quantity < quantity:
@@ -61,8 +75,15 @@ class CartItemSerializer(serializers.ModelSerializer):
 
 
 class CartDetailSerializer(serializers.ModelSerializer):
-    items = CartItemSerializer(many=True, read_only=True)
-    total_price = serializers.DecimalField(max_digits=13, decimal_places=2, read_only=True)
+    items = CartItemSerializer(
+        many=True,
+        read_only=True
+    )
+    total_price = serializers.DecimalField(
+        max_digits=13,
+        decimal_places=2,
+        read_only=True
+    )
 
     class Meta:
         model = Cart
