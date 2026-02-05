@@ -2,28 +2,25 @@ from rest_framework import serializers
 from django.db import transaction
 from .models import Cart, CartItem
 from main.models import Product
-
+from decimal import Decimal
 
 class CartItemSerializer(serializers.ModelSerializer):
     product = serializers.SlugRelatedField(
         slug_field='slug',
-        queryset=Product.objects.filter(is_published=True)
+        queryset=Product.objects.filter(is_published=True),
+        # required=True по умолчанию — оставляем так для POST
+        # required=False нужен только если хотим PATCH без product (но нам не нужен)
     )
-    total_price = serializers.DecimalField(
-        max_digits=13,
-        decimal_places=2,
-        read_only=True
-    )
+    total_price = serializers.DecimalField(max_digits=13, decimal_places=2, read_only=True)
 
     class Meta:
         model = CartItem
         fields = ['id', 'product', 'quantity', 'price', 'total_price', 'created_at', 'updated_at']
         read_only_fields = ['id', 'price', 'total_price', 'created_at', 'updated_at']
 
-    def validate_quantity(self, value):
-        if value < 1:
-            raise serializers.ValidationError("Количество должно быть ≥ 1")
-        return value
+    def validate(self, data):
+        # Можно добавить дополнительные проверки здесь
+        return data
 
     def create(self, validated_data):
         request = self.context['request']
@@ -31,47 +28,59 @@ class CartItemSerializer(serializers.ModelSerializer):
         product = validated_data['product']
         quantity = validated_data['quantity']
 
-        # Ленивое создание корзины
-        # Если у человека ещё нет корзины — создаём её автоматически.
-        cart, _ = Cart.objects.get_or_create(user=user)
-
-        """ transaction.atomic в Django — это инструмент (декоратор или контекстный менеджер), 
-        обеспечивающий атомарность группы запросов к базе данных. 
-        Он гарантирует, что все операции внутри блока выполнятся успешно, либо, 
-        если произойдет ошибка (исключение), все изменения откатятся назад (rollback), 
-        сохраняя целостность данных"""
         with transaction.atomic():
-            # Блокируем строку продукта, чтобы избежать race condition
-            """это метод QuerySet, используемый для блокировки строк базы данных до завершения транзакции. 
-            Он предотвращает конкурентное изменение данных другими запросами,
-            обеспечивая целостность при обновлении (SELECT ... FOR UPDATE), 
-            пока текущая транзакция не будет зафиксирована (COMMIT) или откатана (ROLLBACK). """
+            # Блокируем продукт
             product = Product.objects.select_for_update().get(pk=product.pk)
 
+            if not product.is_published:
+                raise serializers.ValidationError("Товар недоступен для заказа")
+
             if product.quantity < quantity:
-                raise serializers.ValidationError({
-                    'quantity': f'На складе осталось только {product.quantity} шт.'
-                })
+                raise serializers.ValidationError(
+                    {'quantity': f'На складе осталось только {product.quantity} шт.'}
+                )
+
+            cart, _ = Cart.objects.get_or_create(user=user)
 
             cart_item, created = CartItem.objects.get_or_create(
                 cart=cart,
                 product=product,
-                defaults={
-                    'quantity': quantity,
-                    'price': product.price
-                }
+                defaults={'quantity': quantity, 'price': product.price}
             )
 
             if not created:
-                new_quantity = cart_item.quantity + quantity
-                if new_quantity > product.quantity:
-                    raise serializers.ValidationError({
-                        'quantity': f'Нельзя добавить: всего будет {new_quantity}, а на складе {product.quantity}'
-                    })
-                cart_item.quantity = new_quantity
+                new_qty = cart_item.quantity + quantity
+                if new_qty > product.quantity:
+                    raise serializers.ValidationError(
+                        {'quantity': f'Нельзя добавить — будет {new_qty}, а на складе {product.quantity}'}
+                    )
+                cart_item.quantity = new_qty
                 cart_item.save()
 
         return cart_item
+
+    def update(self, instance, validated_data):
+        quantity = validated_data.get('quantity')
+
+        if quantity is None:
+            # Если quantity не передали → ничего не меняем (или можно поднять ошибку)
+            return instance
+
+        if quantity < 1:
+            raise serializers.ValidationError({'quantity': "Количество должно быть ≥ 1"})
+
+        with transaction.atomic():
+            product = Product.objects.select_for_update().get(pk=instance.product.pk)
+
+            if quantity > product.quantity:
+                raise serializers.ValidationError(
+                    {'quantity': f'На складе только {product.quantity} шт.'}
+                )
+
+            instance.quantity = quantity
+            instance.save()
+
+        return instance
 
 
 class CartDetailSerializer(serializers.ModelSerializer):

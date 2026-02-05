@@ -88,6 +88,12 @@ class OrderReadSerializer(serializers.ModelSerializer):
 # ─── Для создания заказа ───────────────────────────────────────
 
 class OrderItemCreateSerializer(serializers.ModelSerializer):
+    """Одна позиция заказа
+        {
+            "product": "nike-air-max",
+            "quantity": 2
+        }
+    """
     product = serializers.SlugRelatedField(
         slug_field='slug',
         queryset=Product.objects.filter(is_published=True)
@@ -99,6 +105,14 @@ class OrderItemCreateSerializer(serializers.ModelSerializer):
 
 
 class OrderCreateSerializer(serializers.ModelSerializer):
+    """Весь заказ целиком
+        {
+          "items": [
+            {"product": "nike-air-max", "quantity": 2},
+            {"product": "adidas-predator", "quantity": 1}
+          ]
+        }
+    """
     items = OrderItemCreateSerializer(
         many=True,
         write_only=True
