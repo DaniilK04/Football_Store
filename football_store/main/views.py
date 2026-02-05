@@ -1,56 +1,24 @@
-from django.shortcuts import render, get_object_or_404
-from django.template.context_processors import request
-from rest_framework.viewsets import *
-from rest_framework import *
-from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import *
-from .models import *
-from .serializers import *
+from rest_framework import status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
+from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
+
+from django.db import transaction
+from django.db.models import F
+
+from .models import Category, Product, Order, OrderItem
+from .serializers import (
+    CategorySerializer, ProductSerializer,
+    OrderReadSerializer, OrderAdminUpdateSerializer
+)
+from cart.models import Cart
+
 
 class CategoryViewSet(ModelViewSet):
-    """Класс для категорий товаров, для всех и для одной категории"""
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    # По какому полю искать объект при retrieve()
-    # lookup_field = 'slug' → /categories/football/ вместо /categories/5/
     lookup_field = 'slug'
-    filter_backends = [
-        DjangoFilterBackend,
-        SearchFilter,
-        OrderingFilter
-    ]
-    filterset_fields = ['title'] # фильтр по точному совпадению
-    search_fields = ['title'] # поиск по названию
-    ordering_fields = ['created_at'] # по каким полям можно сортировать
-    ordering = ['-created_at']  # по умолчанию новые сверху
-
-    def get_permissions(self):
-        # Строка, которая говорит:
-        # КАКОЕ действие сейчас выполняет ViewSet. DRF сам её проставляет.
-        # Типа если действия с таблицей, просмотр всех категорий(списка) и просмотр одной категории(детальной), то
-        # это роль будет пользователя, иначе роль будет админа, для(POST, PUT, DELETE И др) запросов.
-        if self.action in ['list', 'retrieve']:
-            return [AllowAny()] # какой пользователь может смотреть(любой или авторизованный)
-        return [IsAdminUser()]
-
-
-class ProductViewSet(ModelViewSet):
-    serializer_class = ProductSerializer
-    lookup_field = 'slug'
-    filter_backends = [
-        DjangoFilterBackend,
-        SearchFilter,
-        OrderingFilter
-    ]
-    filterset_fields = ['name']  # фильтр по точному совпадению
-    search_fields = ['name']  # поиск по названию
-    ordering_fields = ['created_at']  # по каким полям можно сортировать
-    ordering = ['-created_at']  # по умолчанию новые сверху
-
-
-    def get_queryset(self):
-        return Product.objects.filter(is_published=True)
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
@@ -58,40 +26,96 @@ class ProductViewSet(ModelViewSet):
         return [IsAdminUser()]
 
 
-class OrderViewSetRead(ModelViewSet):
-    filter_backends = [
-        DjangoFilterBackend,
-        SearchFilter,
-        OrderingFilter
-    ]
-    search_fields = ['order_items__product__name']  # поиск по названию
-    ordering_fields = ['status']  # по каким полям можно сортировать
-    ordering = ['-created_at']  # по умолчанию новые сверху
+class ProductViewSet(ModelViewSet):
+    serializer_class = ProductSerializer
+    lookup_field = 'slug'
+
+    def get_queryset(self):
+        if self.action in ['list', 'retrieve']:
+            return Product.objects.filter(is_published=True)
+        return Product.objects.all()
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [AllowAny()]
+        return [IsAdminUser()]
+
+
+class OrderViewSet(ReadOnlyModelViewSet):
+    """
+    Просмотр своих заказов + создание из корзины + изменение статуса (админ)
+    """
+    serializer_class = OrderReadSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        """«Когда я получаю заказы (Order), сразу заранее подтяни
-            все OrderItem этого заказа и связанные с ними Product
-            одним дополнительным запросом, а не по одному на каждый объект».
-            Что значит 'order_items__product'
-            Разберём по цепочке:
-            Order
-             └── order_items (related_name у OrderItem)
-                  └── product (ForeignKey на Product)
-            order_items — связь Order → OrderItem
-            __product — связь OrderItem → Product"""
-        return Order.objects.filter(user=self.request.user).prefetch_related(
-            'order_items__product')
+        if self.request.user.is_staff:
+            # Администратор видит все заказы
+            return Order.objects.all().prefetch_related('order_items__product')
+        # Обычный пользователь видит только свои
+        return Order.objects.filter(user=self.request.user).prefetch_related('order_items__product')
 
     def get_serializer_class(self):
-        # Можно разделить на лёгкий список и полный детальный просмотр
-        if self.action == 'retrieve':
-            # Если хотите более подробный вывод — создайте OrderDetailSerializer
-            return OrderReadSerializer
-        # для списка — можно оставить тот же или сделать облегчённый вариант
+        if self.action == 'partial_update' and self.request.user.is_staff:
+            return OrderAdminUpdateSerializer
         return OrderReadSerializer
 
+    def get_permissions(self):
+        if self.action in ['partial_update']:
+            return [IsAdminUser()]
+        return [IsAuthenticated()]
 
+    @action(detail=False, methods=['post'], url_path='create-from-cart')
+    def create_from_cart(self, request):
+        user = request.user
 
+        try:
+            cart = user.cart
+        except Cart.DoesNotExist:
+            return Response({"detail": "У вас нет корзины"}, status=400)
 
+        if not cart.items.exists():
+            return Response({"detail": "Корзина пуста"}, status=400)
 
+        with transaction.atomic():
+            # Блокируем все товары, которые есть в корзине
+            product_ids = cart.items.values_list('product_id', flat=True)
+            locked_products = {
+                p.id: p for p in Product.objects.select_for_update().filter(
+                    id__in=product_ids,
+                    is_published=True
+                )
+            }
+
+            order = Order.objects.create(user=user, status='new')
+
+            for cart_item in cart.items.select_related('product'):
+                product = locked_products.get(cart_item.product_id)
+
+                if not product:
+                    raise serializers.ValidationError(
+                        f"Товар '{cart_item.product.name}' больше недоступен"
+                    )
+
+                if product.quantity < cart_item.quantity:
+                    raise serializers.ValidationError(
+                        f"Недостаточно '{product.name}' (в наличии: {product.quantity}, нужно: {cart_item.quantity})"
+                    )
+
+                OrderItem.objects.create(
+                    order=order,
+                    product=product,
+                    quantity=cart_item.quantity,
+                    price=cart_item.price
+                )
+
+                # Уменьшаем остаток на складе
+                Product.objects.filter(pk=product.pk).update(
+                    quantity=F('quantity') - cart_item.quantity
+                )
+
+            # Очищаем корзину после успешного оформления
+            cart.items.all().delete()
+
+        serializer = OrderReadSerializer(order, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
