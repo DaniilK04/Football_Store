@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from main.models import Product
+from main.models import *
 from decimal import Decimal
 
 
@@ -27,11 +27,15 @@ class Cart(models.Model):
         return f"Корзина {self.user.username}"
 
     @property
-    def total_price(self):
-        return sum(
-            item.total_price
-            for item in self.items.select_related('product')
-        )
+    def total_price(self) -> Decimal:
+        # Защищаемся от битых/несохранённых CartItem
+        total = Decimal('0.00')
+        for item in self.items.select_related('product'):
+            try:
+                total += item.total_price
+            except (TypeError, AttributeError):
+                pass  # пропускаем проблемные строки, чтобы админка не падала
+        return total
 
     class Meta:
         verbose_name = "Корзина"
@@ -44,7 +48,8 @@ class CartItem(models.Model):
     cart = models.ForeignKey(
         Cart,
         on_delete=models.CASCADE,
-        related_name='items'
+        related_name='items',
+        verbose_name='Корзина'
     )
     product = models.ForeignKey(
         Product,
@@ -56,11 +61,13 @@ class CartItem(models.Model):
         verbose_name='Количество',
         validators=[MinValueValidator(1)]
     )
-    price = models.DecimalField(               # ← важно! фиксируем цену
+    price = models.DecimalField(
         verbose_name='Цена на момент добавления',
         max_digits=13,
         decimal_places=2,
-        editable=False
+        editable=False,
+        default=Decimal('0.00'),           # ← важно для админки и новых экземпляров
+        null=False,
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -74,6 +81,9 @@ class CartItem(models.Model):
 
     @property
     def total_price(self) -> Decimal:
+        """Безопасное вычисление суммы позиции"""
+        if self.price is None or self.quantity is None:
+            return Decimal('0.00')
         return self.price * Decimal(self.quantity)
 
     def clean(self):
@@ -83,8 +93,12 @@ class CartItem(models.Model):
             })
 
     def save(self, *args, **kwargs):
-        if not self.price:  # устанавливаем цену только при первом сохранении
-            self.price = self.product.price
+        if self.price is None or self.price == Decimal('0.00'):
+            # устанавливаем цену только если она не задана
+            if hasattr(self, 'product') and self.product_id:
+                self.price = self.product.price
+            else:
+                self.price = Decimal('0.00')  # fallback
         super().save(*args, **kwargs)
 
     def __str__(self):
