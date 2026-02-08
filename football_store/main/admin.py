@@ -55,7 +55,7 @@ class OrderAdmin(admin.ModelAdmin):
         'id',
         'user',
         'status',
-        'total_price',
+        'display_total_price',
         'created_at',
         'updated_at'
     )
@@ -66,6 +66,11 @@ class OrderAdmin(admin.ModelAdmin):
     inlines = [OrderItemInline]
     autocomplete_fields = ('user',)
 
+    def display_total_price(self, obj):
+        return obj.total_price
+
+    display_total_price.short_description = "Общая цена"
+
 @admin.register(OrderItem)
 class OrderItemAdmin(admin.ModelAdmin):
     list_display = (
@@ -73,6 +78,7 @@ class OrderItemAdmin(admin.ModelAdmin):
         'order',
         'product',
         'quantity',
+        'total_price',
         'price'
     )
     list_filter = ('order',)

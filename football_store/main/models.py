@@ -89,7 +89,8 @@ class Product(models.Model):
         Category,
         on_delete=models.CASCADE,
         related_name="products",
-        db_index=True
+        db_index=True,
+        verbose_name='Категория'
     )
     image = models.ImageField(
         upload_to='photos/%Y/%m/%d/',
@@ -167,13 +168,20 @@ class Order(models.Model):
         choices=ORDER_STATUS,
         default='new'
     )
-    created_at = models.DateTimeField(verbose_name='Дата создания', auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Дата обновления')
+    created_at = models.DateTimeField(
+        verbose_name='Дата создания',
+        auto_now_add=True)
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Дата обновления'
+    )
 
     items = models.ManyToManyField(
         Product,
         through='OrderItem',
-        related_name='orders'
+        related_name='orders',
+        verbose_name='Товар'
     )
 
     @property
@@ -200,36 +208,49 @@ class Order(models.Model):
             models.Index(fields=['user']),
         ]
 
+
 class OrderItem(models.Model):
     order = models.ForeignKey(
         Order,
         on_delete=models.CASCADE,
-        related_name="order_items"
+        related_name="order_items",
+        verbose_name='Заказ'
     )
     product = models.ForeignKey(
         Product,
         on_delete=models.CASCADE,
-        related_name='order_items'
+        related_name='order_items',
+        verbose_name='Товар'
     )
     quantity = models.PositiveIntegerField(
-        verbose_name='Количество',
-        validators=[MinValueValidator(1)]
+        validators=[MinValueValidator(1)],
+        verbose_name='Количество'
     )
     price = models.DecimalField(
-        verbose_name='Цена на момент заказа',
         max_digits=13,
-        decimal_places=2
+        decimal_places=2,
+        verbose_name='Цена'
     )
+    total_price = models.DecimalField(
+        max_digits=13,
+        decimal_places=2,
+        default=0,
+        verbose_name='Общая цена'
+    )
+
+    def save(self, *args, **kwargs):
+        # если объект создаётся и price не указан
+        if self._state.adding and (self.price is None):
+            self.price = self.product.price if self.product else 0
+        # считаем total_price
+        self.total_price = self.price * self.quantity
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.product.name} × {self.quantity}"
 
     class Meta:
         verbose_name = "Позиция заказа"
         verbose_name_plural = "Позиции заказов"
         db_table = 'order_item'
         unique_together = ('order', 'product')
-
-    @property
-    def total_price(self) -> Decimal:
-        return self.price * Decimal(self.quantity)
-
-    def __str__(self):
-        return f"{self.product.name} × {self.quantity}"

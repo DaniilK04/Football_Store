@@ -106,7 +106,7 @@ class OrderViewSet(ReadOnlyModelViewSet):
                     order=order,
                     product=product,
                     quantity=cart_item.quantity,
-                    price=cart_item.price
+                    # price можно не передавать
                 )
 
                 # Уменьшаем остаток на складе

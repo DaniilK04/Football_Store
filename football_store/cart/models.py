@@ -69,8 +69,13 @@ class CartItem(models.Model):
         default=Decimal('0.00'),           # ← важно для админки и новых экземпляров
         null=False,
     )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата создания')
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Дата обновления'
+    )
 
     class Meta:
         verbose_name = "Товар в корзине"
