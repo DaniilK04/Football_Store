@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Football Store</title>
+    <link rel="stylesheet" href="style/styles.css">
+</head>
+<body>
+
+<header>
+    <h1 onclick="window.location.href='index.html'">Football Store</h1>
+    <nav>
+        <a href="cart.html">Корзина</a>
+        <a href="orders.html">Мои заказы</a>
+        <a href="login.html" id="login-link">Войти</a>
+        <button id="logout-btn" onclick="logout()" style="display:none;">Выйти</button>
+    </nav>
+</header>
+
+<div class="container">
+    <!-- Слева категории -->
+    <aside class="categories">
+        <h2>Категории</h2>
+        <div id="categories">
+            <!-- Категории подставляются через JS -->
+        </div>
+    </aside>
+
+    <!-- Справа товары -->
+    <section class="products" id="products">
+        <!-- Карточки подставляются через JS -->
+    </section>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/main.js"></script>
+<script src="js/auth.js" defer></script>
+
+<script>
+    // Функция добавления в корзину (оставляем как есть)
+    async function addToCart(slug) {
+        try {
+            const token = localStorage.getItem("authToken") || "";
+            if (!token) {
+                alert("Войдите в аккаунт, чтобы добавить товар в корзину");
+                return;
+            }
+
+            const res = await fetch("http://127.0.0.1:8000/api/cart/item/add/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Token ${token}`
+                },
+                body: JSON.stringify({ product: slug, quantity: 1 })
+            });
+
+            if (res.ok) {
+                alert("Товар добавлен в корзину!");
+            } else {
+                const text = await res.text();
+                alert("Ошибка добавления: " + (res.status + " — " + text.substring(0, 200)));
+            }
+        } catch (err) {
+            alert("Не удалось добавить товар");
+            console.error(err);
+        }
+    }
+</script>
+
+</body>
+</html>

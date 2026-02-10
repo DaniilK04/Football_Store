@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Корзина — Football Store</title>
+  <link rel="stylesheet" href="style/product.css">
+  <link rel="stylesheet" href="style/cart.css">
+</head>
+<body>
+
+<header>
+  <h1 onclick="window.location.href='index.html'">Football Store</h1>
+  <nav>
+    <a href="cart.html">Корзина</a>
+    <a href="orders.html">Мои заказы</a>
+    <a href="login.html" id="login-link">Войти</a>
+    <button id="logout-btn" onclick="logout()" style="display:none;">Выйти</button>
+  </nav>
+</header>
+
+<div class="cart-container" id="cart-container">
+  <div id="cart-empty" style="display:none;">
+    Корзина пуста. <a href="index.html">Вернуться к покупкам</a>
+  </div>
+
+  <div id="cart-items"></div>
+
+  <div id="cart-summary" style="display:none;">
+    <div class="cart-summary">
+      <span>Итого:</span>
+      <span id="cart-total">0 ₽</span>
+    </div>
+    <button id="checkout-btn" onclick="checkout()">Оформить заказ</button>
+  </div>
+</div>
+
+<script>
+const backendUrl = "http://127.0.0.1:8000";
+
+function showEmpty() {
+  document.getElementById("cart-empty").style.display = "block";
+  document.getElementById("cart-items").style.display = "none";
+  document.getElementById("cart-summary").style.display = "none";
+}
+
+async function loadCart() {
+  const token = localStorage.getItem("authToken") || "";
+  if (!token) {
+    showEmpty();
+    return;
+  }
+
+  try {
+    const res = await fetch(`${backendUrl}/api/cart/`, {
+      headers: { "Authorization": `Token ${token}` }
+    });
+    if (!res.ok) throw new Error(`Ошибка сервера: ${res.status}`);
+    const cart = await res.json();
+
+    if (!cart.items || cart.items.length === 0) {
+      showEmpty();
+      return;
+    }
+
+    document.getElementById("cart-empty").style.display = "none";
+    const itemsContainer = document.getElementById("cart-items");
+    itemsContainer.innerHTML = "";
+
+    let total = 0;
+
+    cart.items.forEach(item => {
+      const price = parseFloat(item.price);
+      const qty = item.quantity;
+      const itemTotal = price * qty;
+      total += itemTotal;
+
+      const div = document.createElement("div");
+      div.className = "cart-item";
+      div.innerHTML = `
+        <img src="${item.product.image ? backendUrl + item.product.image : 'https://via.placeholder.com/150'}" alt="${item.product.name}">
+        <div class="cart-item-info">
+          <h3>${item.product.name}</h3>
+          <div class="price">${price.toFixed(2)} ₽</div>
+          <div class="quantity">Количество: ${qty}</div>
+          <button class="remove-btn" onclick="removeItem(${item.id})">Удалить</button>
+        </div>
+      `;
+      itemsContainer.appendChild(div);
+    });
+
+    document.getElementById("cart-summary").style.display = "block";
+    document.getElementById("cart-total").textContent = total.toFixed(2) + " ₽";
+
+  } catch (err) {
+    console.error(err);
+    showEmpty();
+  }
+}
+
+async function removeItem(itemId) {
+  const token = localStorage.getItem("authToken");
+  if (!token) return;
+
+  try {
+    const res = await fetch(`${backendUrl}/api/cart/item/remove/${itemId}/`, {
+      method: "DELETE",
+      headers: { "Authorization": `Token ${token}` }
+    });
+    if (!res.ok) throw new Error("Ошибка при удалении");
+    await loadCart();
+  } catch (err) {
+    alert("Не удалось удалить товар");
+  }
+}
+
+async function checkout() {
+  const token = localStorage.getItem("authToken");
+  if (!token) { alert("Войдите для оформления заказа"); return; }
+
+  try {
+    const res = await fetch(`${backendUrl}/api/v1/order/create-from-cart/`, {
+      method: "POST",
+      headers: { "Authorization": `Token ${token}` }
+    });
+    if (res.ok) {
+      alert("Заказ успешно оформлен!");
+      await loadCart();
+    } else {
+      const err = await res.json();
+      alert("Ошибка оформления: " + (err.detail || JSON.stringify(err)));
+    }
+  } catch (err) {
+    alert("Не удалось оформить заказ");
+  }
+}
+
+document.addEventListener("DOMContentLoaded", loadCart);
+</script>
+
+<script src="js/auth.js" defer></script>
+</body>
+</html>

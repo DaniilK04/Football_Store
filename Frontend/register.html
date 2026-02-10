@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Регистрация — Football Store</title>
+    <style>
+        * { box-sizing:border-box; margin:0; padding:0; font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color:#f5f5f5; color:#333; min-height:100vh; display:flex; flex-direction:column; }
+        header { background-color:#0d6efd; color:white; padding:15px 30px; display:flex; justify-content:space-between; align-items:center; }
+        header h1 { font-size:28px; cursor:pointer; }
+        nav a { color:white; text-decoration:none; margin-left:20px; font-weight:500; }
+        nav a:hover { text-decoration:underline; }
+
+        .form-container {
+            max-width:420px;
+            width:100%;
+            margin:60px auto;
+            background:white;
+            padding:40px 30px;
+            border-radius:12px;
+            box-shadow:0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        h2 { text-align:center; margin-bottom:30px; font-size:28px; color:#0d6efd; }
+        label { display:block; margin-bottom:8px; font-weight:500; color:#444; }
+        input {
+            width:100%;
+            padding:12px;
+            margin-bottom:20px;
+            border:1px solid #ddd;
+            border-radius:6px;
+            font-size:16px;
+        }
+        input:focus { outline:none; border-color:#0d6efd; box-shadow:0 0 0 3px rgba(13,110,253,0.2); }
+
+        button {
+            width:100%;
+            background:#0d6efd;
+            color:white;
+            border:none;
+            padding:14px;
+            border-radius:6px;
+            font-size:17px;
+            cursor:pointer;
+            transition:background 0.2s;
+        }
+        button:hover { background:#0b5ed7; }
+
+        .error { color:red; text-align:center; margin:10px 0; font-size:15px; }
+        .success { color:green; text-align:center; margin:10px 0; font-size:15px; }
+
+        .link { text-align:center; margin-top:20px; }
+        .link a { color:#0d6efd; text-decoration:none; }
+        .link a:hover { text-decoration:underline; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1 onclick="window.location.href='index.html'">Football Store</h1>
+    <nav>
+        <a href="cart.html">Корзина</a>
+        <a href="orders.html">Мои заказы</a>
+        <a href="login.html">Войти</a>
+    </nav>
+</header>
+
+<div class="form-container">
+    <h2>Регистрация</h2>
+
+    <div id="error" class="error"></div>
+    <div id="success" class="success"></div>
+
+    <form id="register-form">
+        <label for="username">Имя пользователя</label>
+        <input type="text" id="username" required autocomplete="username">
+
+        <label for="password">Пароль</label>
+        <input type="password" id="password" required autocomplete="new-password">
+
+        <button type="submit">Зарегистрироваться</button>
+    </form>
+
+    <div class="link">
+        Уже есть аккаунт? <a href="login.html">Войти</a>
+    </div>
+</div>
+
+<script>
+    const backendUrl = "http://127.0.0.1:8000";
+
+    document.getElementById("register-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const username = document.getElementById("username").value.trim();
+        const password = document.getElementById("password").value;
+
+        const errorDiv = document.getElementById("error");
+        const successDiv = document.getElementById("success");
+        errorDiv.textContent = "";
+        successDiv.textContent = "";
+
+        try {
+            const res = await fetch(`${backendUrl}/auth/users/`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password })
+            });
+
+            if (res.ok) {
+                // Автоматически логинимся после регистрации
+                const loginRes = await fetch(`${backendUrl}/auth/token/login/`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await loginRes.json();
+
+                if (loginRes.ok) {
+                    localStorage.setItem("authToken", data.auth_token);
+                    successDiv.textContent = "Регистрация успешна! Вы вошли в аккаунт.";
+                    setTimeout(() => window.location.href = "index.html", 1500);
+                } else {
+                    errorDiv.textContent = "Регистрация прошла, но не удалось войти. Попробуйте войти вручную.";
+                }
+            } else {
+                const err = await res.json();
+                errorDiv.textContent = err.username?.[0] || err.password?.[0] || "Ошибка регистрации";
+            }
+        } catch (err) {
+            errorDiv.textContent = "Ошибка сети. Проверьте, запущен ли сервер.";
+            console.error(err);
+        }
+    });
+</script>
+
+</body>
+</html>

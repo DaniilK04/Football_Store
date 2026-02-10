@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title id="page-title">Товар — Football Store</title>
+  <link rel="stylesheet" href="style/product.css">
+</head>
+<body>
+
+<header>
+  <h1 onclick="window.location.href='index.html'">Football Store</h1>
+  <nav>
+    <a href="cart.html">Корзина</a>
+    <a href="orders.html">Мои заказы</a>
+    <a href="login.html" id="login-link">Войти</a>
+    <button id="logout-btn" onclick="logout()" style="display:none;">Выйти</button>
+  </nav>
+</header>
+
+<div class="product-detail-container">
+  <div id="error-block" class="hidden" style="color:red; text-align:center; padding:20px;"></div>
+
+  <div class="product-detail-flex">
+    <!-- Фото -->
+    <div class="product-image-wrapper">
+      <img
+        id="product-image"
+        src="https://via.placeholder.com/800x800?text=Загрузка..."
+        alt="Товар"
+        onerror="this.src='https://via.placeholder.com/800x800?text=Фото+отсутствует'"
+      >
+    </div>
+
+    <!-- Информация -->
+    <div class="product-info">
+      <h1 id="product-name">Загрузка...</h1>
+      <p id="product-price" class="price">...</p>
+
+      <div>
+        <h3 class="description-title">Описание</h3>
+        <p id="product-description" class="description">Загрузка описания...</p>
+      </div>
+
+      <button id="add-to-cart-btn" class="add-to-cart-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+        </svg>
+        Добавить в корзину
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="back-link">
+  <a href="index.html">← Вернуться к каталогу</a>
+</div>
+
+<script>
+  const backendUrl = "http://127.0.0.1:8000";
+
+  function showError(msg) {
+    const block = document.getElementById("error-block");
+    block.textContent = msg;
+    block.classList.remove("hidden");
+  }
+
+  async function loadProduct() {
+    const params = new URLSearchParams(window.location.search);
+    const slug = params.get("slug");
+
+    if (!slug) {
+      showError("Товар не выбран");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${backendUrl}/api/v1/product/${slug}/`);
+      if (!res.ok) throw new Error(`Ошибка сервера: ${res.status}`);
+
+      const product = await res.json();
+
+      document.getElementById("page-title").textContent = `${product.name} — Football Store`;
+      document.getElementById("product-name").textContent = product.name;
+      document.getElementById("product-price").textContent = product.price + " ₽";
+      document.getElementById("product-description").textContent = product.description || "Описание отсутствует";
+
+      const img = document.getElementById("product-image");
+      img.src = product.image || "https://via.placeholder.com/800x800?text=Нет+фото";
+      img.alt = product.name;
+
+      document.getElementById("add-to-cart-btn").onclick = () => addToCart(slug);
+
+    } catch (err) {
+      console.error(err);
+      showError(`Не удалось загрузить товар: ${err.message}`);
+    }
+  }
+
+  async function addToCart(slug) {
+    try {
+      const token = localStorage.getItem("authToken") || "";
+      if (!token) {
+        alert("Войдите в аккаунт, чтобы добавить товар");
+        return;
+      }
+
+      const res = await fetch(`${backendUrl}/api/cart/item/add/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Token ${token}`
+        },
+        body: JSON.stringify({ product: slug, quantity: 1 })
+      });
+
+      if (res.ok) {
+        alert("Товар добавлен в корзину!");
+      } else {
+        const text = await res.text();
+        alert("Ошибка добавления: " + (res.status + " — " + text.substring(0, 200)));
+      }
+    } catch (err) {
+      alert("Не удалось добавить товар");
+      console.error(err);
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", loadProduct);
+</script>
+
+<script src="js/auth.js" defer></script>
+</body>
+</html>

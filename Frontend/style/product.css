@@ -1,0 +1,168 @@
+/* css/product.css */
+
+/* Общие стили (аналогично index) */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: #f5f5f5;
+    color: #333;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Шапка — точно такая же, как в index.html */
+header {
+    background-color: #0d6efd;
+    color: white;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+header h1 {
+    font-size: 28px;
+    cursor: pointer;
+}
+
+nav a,
+nav button {
+    color: white;
+    text-decoration: none;
+    margin-left: 20px;
+    font-weight: 500;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+nav a:hover,
+nav button:hover {
+    text-decoration: underline;
+}
+
+/* Основной контейнер товара */
+.product-detail-container {
+    max-width: 1200px;
+    margin: 40px auto;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    overflow: hidden;
+}
+
+.product-detail-flex {
+    display: flex;
+    flex-direction: row;
+    gap: 30px;
+}
+
+.product-image-wrapper {
+    flex: 0 0 60%;
+    background: #f9f9f9;
+    padding: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-right: 1px solid #eee;
+}
+
+.product-image-wrapper img {
+    max-width: 100%;
+    max-height: 600px;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.product-info {
+    flex: 1;
+    padding: 40px 30px 40px 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.product-info h1 {
+    font-size: 32px;
+    margin-bottom: 20px;
+    line-height: 1.3;
+}
+
+.product-info .price {
+    font-size: 36px;
+    font-weight: bold;
+    color: #0d6efd;
+    margin-bottom: 30px;
+}
+
+.product-info .description-title {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: #222;
+}
+
+.product-info .description {
+    font-size: 17px;
+    line-height: 1.6;
+    color: #444;
+    margin-bottom: 40px;
+}
+
+.add-to-cart-btn {
+    margin-top: auto;
+    background: #0d6efd;
+    color: white;
+    border: none;
+    padding: 16px 0;
+    font-size: 18px;
+    font-weight: 500;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.add-to-cart-btn:hover {
+    background: #0b5ed7;
+}
+
+.back-link {
+    text-align: center;
+    margin: 30px 0;
+    font-size: 16px;
+}
+
+.back-link a {
+    color: #0d6efd;
+    text-decoration: none;
+}
+
+.back-link a:hover {
+    text-decoration: underline;
+}
+
+/* Адаптив */
+@media (max-width: 992px) {
+    .product-detail-flex {
+        flex-direction: column;
+    }
+    .product-image-wrapper {
+        border-right: none;
+        border-bottom: 1px solid #eee;
+        padding: 30px 20px;
+    }
+    .product-info {
+        padding: 30px 20px;
+    }
+}
