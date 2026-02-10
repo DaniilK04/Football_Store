@@ -3,7 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
-
+from .pagination import *
 from django.db import transaction
 from django.db.models import F
 
@@ -29,6 +29,7 @@ class CategoryViewSet(ModelViewSet):
 class ProductViewSet(ModelViewSet):
     serializer_class = ProductSerializer
     lookup_field = 'slug'
+    pagination_class = ProductPaginateCursor
 
     def get_queryset(self):
         if self.action in ['list', 'retrieve']:
@@ -47,6 +48,7 @@ class OrderViewSet(ReadOnlyModelViewSet):
     """
     serializer_class = OrderReadSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = ProductPaginateCursor
 
     def get_queryset(self):
         if self.request.user.is_staff:

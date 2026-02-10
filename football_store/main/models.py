@@ -23,7 +23,8 @@ class Category(models.Model):
     )
     created_at = models.DateTimeField(
         verbose_name='Дата создания',
-        auto_now_add=True
+        auto_now_add=True,
+        db_index=True
     )
     updated_at = models.DateTimeField(
         auto_now=True,
@@ -105,7 +106,8 @@ class Product(models.Model):
     )
     created_at = models.DateTimeField(
         verbose_name='Дата создания',
-        auto_now_add=True
+        auto_now_add=True,
+        db_index=True
     )
     updated_at = models.DateTimeField(
         auto_now=True,
@@ -170,7 +172,9 @@ class Order(models.Model):
     )
     created_at = models.DateTimeField(
         verbose_name='Дата создания',
-        auto_now_add=True)
+        auto_now_add=True,
+        db_index=True
+    )
 
     updated_at = models.DateTimeField(
         auto_now=True,

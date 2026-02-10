@@ -9,6 +9,7 @@ from django.shortcuts import get_object_or_404
 from .models import Cart, CartItem
 from .serializers import CartDetailSerializer, CartItemSerializer
 from main.models import Product
+from .pagination import *
 
 
 class CartViewSet(RetrieveModelMixin, GenericViewSet):
@@ -39,6 +40,7 @@ class CartViewSet(RetrieveModelMixin, GenericViewSet):
 class CartItemViewSet(ModelViewSet):
     serializer_class = CartItemSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = CartPaginateCursor
 
     def get_queryset(self):
         return CartItem.objects.filter(
