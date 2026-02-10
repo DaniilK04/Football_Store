@@ -59,6 +59,18 @@ REST_FRAMEWORK = {
 DJOSER = {
     "LOGIN_FIELD": "username",
     "USER_CREATE_PASSWORD_RETYPE": True,
+    "SEND_ACTIVATION_EMAIL": False,               # включи True, если нужна активация
+    "SERIALIZERS": {
+        "user_create": "djoser.serializers.UserCreateSerializer",
+        "user": "djoser.serializers.UserSerializer",
+        "current_user": "djoser.serializers.UserSerializer",  # ← важно для /me/
+        "user_delete": "djoser.serializers.UserDeleteSerializer",
+    },
+    "PERMISSIONS": {
+        "user": ["rest_framework.permissions.IsAuthenticated"],
+        "user_list": ["rest_framework.permissions.IsAdminUser"],   # обычно только админ видит список
+        "user_delete": ["rest_framework.permissions.IsAuthenticated"],
+    },
 }
 
 
