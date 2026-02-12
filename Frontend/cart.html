@@ -52,7 +52,7 @@ async function loadCart() {
   }
 
   try {
-    const res = await fetch(`${backendUrl}/api/cart/`, {
+    const res = await fetch(`${backendUrl}/api/cart/cart/`, {
       headers: { "Authorization": `Token ${token}` }
     });
     if (!res.ok) throw new Error(`Ошибка сервера: ${res.status}`);
@@ -78,9 +78,9 @@ async function loadCart() {
       const div = document.createElement("div");
       div.className = "cart-item";
       div.innerHTML = `
-        <img src="${item.product.image ? backendUrl + item.product.image : 'https://via.placeholder.com/150'}" alt="${item.product.name}">
+        <img src="${item.product_detail.image ? backendUrl + item.product_detail.image : 'https://via.placeholder.com/150'}" alt="${item.product_detail.name}">
         <div class="cart-item-info">
-          <h3>${item.product.name}</h3>
+          <h3>${item.product_detail.name}</h3>
           <div class="price">${price.toFixed(2)} ₽</div>
           <div class="quantity">Количество: ${qty}</div>
           <button class="remove-btn" onclick="removeItem(${item.id})">Удалить</button>
@@ -99,19 +99,32 @@ async function loadCart() {
 }
 
 async function removeItem(itemId) {
-  const token = localStorage.getItem("authToken");
-  if (!token) return;
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+        alert("Не авторизован");
+        return;
+    }
 
-  try {
-    const res = await fetch(`${backendUrl}/api/cart/item/remove/${itemId}/`, {
-      method: "DELETE",
-      headers: { "Authorization": `Token ${token}` }
-    });
-    if (!res.ok) throw new Error("Ошибка при удалении");
-    await loadCart();
-  } catch (err) {
-    alert("Не удалось удалить товар");
-  }
+    try {
+        const res = await fetch(`${backendUrl}/api/cart/item/${itemId}/`, {
+            method: "DELETE",
+            headers: {
+                "Authorization": `Token ${token}`
+            }
+        });
+
+        if (res.ok) {
+            // Успешно удалено → обновляем корзину
+            await loadCart();
+        } else {
+            const errorData = await res.json().catch(() => ({}));
+            console.error("Ошибка удаления:", res.status, errorData);
+            alert(`Не удалось удалить (код ${res.status})`);
+        }
+    } catch (err) {
+        console.error("Ошибка сети при удалении:", err);
+        alert("Ошибка соединения при попытке удалить товар");
+    }
 }
 
 async function checkout() {

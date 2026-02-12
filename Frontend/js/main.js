@@ -1,4 +1,4 @@
-const backendUrl = "http://127.0.0.1:8000"; // Адрес Django сервера
+const backendUrl = "http://127.0.0.1:8000";
 
 // Загрузка категорий
 async function loadCategories() {
@@ -47,7 +47,6 @@ function renderProducts(products) {
     }
 
     container.innerHTML = products.map(p => {
-        // image уже содержит полный URL
         const imgUrl = p.image || 'images/no-image.png';
 
         return `
@@ -72,28 +71,37 @@ function openProduct(slug) {
     window.location.href = `product.html?slug=${slug}`;
 }
 
-// Добавить в корзину
+// Добавить в корзину — ИСПРАВЛЕННЫЙ ВАРИАНТ
 async function addToCart(slug) {
     try {
         const token = localStorage.getItem("authToken") || "";
-        const res = await fetch(`${backendUrl}/api/item/add/`, {
+        if (!token) {
+            alert("Войдите в аккаунт, чтобы добавить товар");
+            return;
+        }
+
+        console.log("Добавляем:", slug, "с токеном:", token.substring(0, 10) + "...");
+
+        const res = await fetch(`${backendUrl}/api/cart/item/add/`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                ...(token && { "Authorization": `Token ${token}` })
+                "Authorization": `Token ${token}`
             },
             body: JSON.stringify({ product: slug, quantity: 1 })
         });
 
-        if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.detail || "Ошибка добавления");
+        if (res.ok) {
+            alert("Товар добавлен в корзину!");
+            console.log("Успех!");
+        } else {
+            const text = await res.text();
+            console.log("Ошибка:", res.status, text);
+            alert(`Ошибка добавления (${res.status}): ${text.substring(0, 200)}`);
         }
-
-        alert("Товар добавлен в корзину");
     } catch (err) {
-        console.error(err);
-        alert("Не удалось добавить товар: " + (err.message || "неизвестная ошибка"));
+        console.error("Ошибка fetch:", err);
+        alert("Не удалось добавить товар (проверь консоль)");
     }
 }
 
