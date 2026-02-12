@@ -88,25 +88,39 @@ nav button:hover {
 }
 
 /* Сетка товаров */
+/* Сетка товаров */
 .products {
     flex: 1;
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     gap: 20px;
+    align-content: flex-start;     /* ← важно: карточки прижимаются к верху */
+    padding: 0 10px;
 }
 
+/* Карточка товара */
 .product-card {
     background: white;
     width: 220px;
+    min-width: 220px;
+    max-width: 220px;
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
     padding: 10px;
     text-align: center;
     transition: transform 0.2s;
-    display: flex;
+
+    /* ← убрали justify-content: space-between и display: flex */
+    /* теперь карточка сама по себе, без внутреннего flex-растяжения */
+
+    display: flex;                    /* оставляем, но... */
     flex-direction: column;
-    justify-content: space-between;
+    /* justify-content: space-between;  ← УБРАТЬ эту строку! */
+
+    min-height: 320px;                /* ← опционально: минимальная высота, чтобы все карточки были примерно одинаковые */
+    height: auto;                     /* ← явно разрешаем естественную высоту */
+    align-self: flex-start;           /* ← главное исправление: карточка не тянется вверх */
 }
 
 .product-card:hover {
@@ -124,7 +138,7 @@ nav button:hover {
 .product-card h3 {
     font-size: 18px;
     margin-bottom: 5px;
-    height: 48px;
+    min-height: 48px;                 /* фиксируем место под заголовок */
     overflow: hidden;
 }
 
@@ -143,11 +157,7 @@ nav button:hover {
     border-radius: 4px;
     cursor: pointer;
     font-size: 14px;
-    margin-top: auto;
-}
-
-.product-card button:hover {
-    background: #0b5ed7;
+    margin-top: auto;                 /* кнопка прижимается к низу карточки */
 }
 
 /* Адаптив */
