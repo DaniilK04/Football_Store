@@ -1,14 +1,18 @@
 const backendUrl = "http://127.0.0.1:8000";
 
-// Загрузка категорий
+// ─── Загрузка категорий ────────────────────────────────
 async function loadCategories() {
     try {
         const res = await fetch(`${backendUrl}/api/v1/category/`);
         if (!res.ok) throw new Error(`Категории: ${res.status}`);
         const categories = await res.json();
         const container = document.getElementById("categories");
+
+        // Ссылки с slug
         container.innerHTML = categories.map(c => `
-            <a href="#" onclick="filterCategory(${c.id})">${c.title}</a>
+            <a href="?category=${c.slug}" onclick="filterCategory('${c.slug}'); return false;">
+                ${c.title}
+            </a>
         `).join('');
     } catch (error) {
         console.error("Ошибка загрузки категорий:", error);
@@ -16,7 +20,7 @@ async function loadCategories() {
     }
 }
 
-// Загрузка товаров
+// ─── Загрузка товаров ────────────────────────────────
 let allProducts = [];
 
 async function loadProducts() {
@@ -27,6 +31,7 @@ async function loadProducts() {
         const data = await res.json();
         console.log("Получено товаров:", data.results?.length || 0);
 
+        // Берем только опубликованные товары
         allProducts = (data.results || []).filter(p => p.is_published);
         renderProducts(allProducts);
     } catch (error) {
@@ -36,7 +41,7 @@ async function loadProducts() {
     }
 }
 
-// Отображение карточек товаров
+// ─── Отображение карточек товаров ────────────────────
 function renderProducts(products) {
     const container = document.getElementById("products");
     container.innerHTML = "";
@@ -60,18 +65,21 @@ function renderProducts(products) {
     }).join('');
 }
 
-// Фильтр по категории
-function filterCategory(categoryId) {
-    const filtered = allProducts.filter(p => p.category === categoryId);
+// ─── Фильтр по slug категории ───────────────────────
+function filterCategory(categorySlug) {
+    const filtered = allProducts.filter(p => p.category_slug === categorySlug);
     renderProducts(filtered);
+
+    // Меняем URL без перезагрузки страницы
+    window.history.pushState({}, "", `?category=${categorySlug}`);
 }
 
-// Открыть страницу товара
+// ─── Открыть страницу товара ───────────────────────
 function openProduct(slug) {
     window.location.href = `product.html?slug=${slug}`;
 }
 
-// Добавить в корзину — ИСПРАВЛЕННЫЙ ВАРИАНТ
+// ─── Добавить в корзину ───────────────────────────
 async function addToCart(slug) {
     try {
         const token = localStorage.getItem("authToken") || "";
@@ -105,8 +113,15 @@ async function addToCart(slug) {
     }
 }
 
-// Инициализация страницы
+// ─── Инициализация страницы ─────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
     loadCategories();
-    loadProducts();
+    loadProducts().then(() => {
+        // Автофильтр по slug из URL
+        const params = new URLSearchParams(window.location.search);
+        const categorySlug = params.get("category");
+        if (categorySlug) {
+            filterCategory(categorySlug);
+        }
+    });
 });
