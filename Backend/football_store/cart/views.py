@@ -12,38 +12,34 @@ from main.models import Product
 from .pagination import CartPaginateCursor
 
 
-class CartViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet):
+class CartViewSet(RetrieveModelMixin, GenericViewSet):
     """
-    Работа с корзиной пользователя:
-    - получение корзины (list / retrieve — одно и то же)
-    - summary (итог)
-    - очистка
+    Корзина пользователя (одна на пользователя)
     """
     serializer_class = CartDetailSerializer
     permission_classes = [IsAuthenticated]
 
     def get_object(self):
-        cart, _ = Cart.objects.get_or_create(user=self.request.user)
+        # Создаём корзину автоматически, если её нет
+        cart, created = Cart.objects.get_or_create(user=self.request.user)
         return cart
 
+    # list перенаправляем на retrieve (чтобы /api/cart/ возвращал корзину)
     def list(self, request, *args, **kwargs):
-        # list и retrieve — одно и то же, т.к. корзина одна
         cart = self.get_object()
         serializer = self.get_serializer(cart)
         return Response(serializer.data)
 
     @action(detail=False, methods=['get'])
     def summary(self, request):
-        """ Лёгкий endpoint: сумма + количество позиций """
         cart = self.get_object()
         return Response({
-            'total_price': str(cart.total_price),  # Decimal → str для JSON
+            'total_price': str(cart.total_price),
             'items_count': cart.items.count(),
         })
 
     @action(detail=False, methods=['post', 'delete'], url_path='clear')
     def clear(self, request):
-        """ Очистить корзину (теперь без pk) """
         cart = self.get_object()
         cart.items.all().delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -81,11 +77,13 @@ class CartItemViewSet(ModelViewSet):
         """ Добавление товара в корзину """
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        cart_item = serializer.save()
 
-        # Возвращаем **всю** корзину — удобно для фронтенда
-        cart_serializer = CartDetailSerializer(
-            cart_item.cart,
-            context={'request': request}
-        )
+        # Явно создаём корзину, если её нет
+        cart, created = Cart.objects.get_or_create(user=request.user)
+
+        # Передаём корзину в serializer (чтобы не было конфликта)
+        serializer.save(cart=cart)
+
+        # Возвращаем всю корзину
+        cart_serializer = CartDetailSerializer(cart, context={'request': request})
         return Response(cart_serializer.data, status=status.HTTP_201_CREATED)
