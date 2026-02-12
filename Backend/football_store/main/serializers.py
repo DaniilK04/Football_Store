@@ -12,13 +12,21 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class ProductSerializer(serializers.ModelSerializer):
+    # Добавляем slug категории
+    category_slug = serializers.SlugRelatedField(
+        source='category',
+        read_only=True,
+        slug_field='slug'
+    )
+
     class Meta:
         model = Product
         fields = [
             'id', 'name', 'slug', 'description', 'price', 'quantity',
-            'category', 'image', 'is_published', 'created_at', 'updated_at'
+            'category', 'category_slug', 'image', 'is_published', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'slug', 'created_at', 'updated_at']
+
 
 
 # ─── Order ──────────────────────────────────────────────────────
