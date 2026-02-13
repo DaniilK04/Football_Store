@@ -56,10 +56,10 @@ pip install -r requirements.txt
 
 Создай файл .env в корне проекта с содержимым:
 
-SECRET_KEY='ваш_секретный_ключ'
+SECRET_KEY='секретный_ключ'
 POSTGRES_DB=shopbd
 POSTGRES_USER=shopbd
-POSTGRES_PASSWORD='ваш_пароль'
+POSTGRES_PASSWORD='пароль'
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
 
