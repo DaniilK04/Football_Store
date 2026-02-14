@@ -78,7 +78,9 @@ async function loadCart() {
       const div = document.createElement("div");
       div.className = "cart-item";
       div.innerHTML = `
-        <img src="${item.product_detail.image ? backendUrl + item.product_detail.image : 'https://via.placeholder.com/150'}" alt="${item.product_detail.name}">
+        <img src="${item.product_detail.image || 'https://via.placeholder.com/150'}"
+     alt="${item.product_detail.name}"
+     onerror="this.src='https://via.placeholder.com/150'; this.alt='Фото отсутствует';">
         <div class="cart-item-info">
           <h3>${item.product_detail.name}</h3>
           <div class="price">${price.toFixed(2)} ₽</div>
