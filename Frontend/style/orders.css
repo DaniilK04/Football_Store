@@ -1,224 +1,228 @@
-/* order.css — улучшенная версия */
+/* ─────────────────────────────────────────────
+   Orders Page — Wide Clean Premium Layout
+───────────────────────────────────────────── */
 
 .orders-container {
-  max-width: 1100px;
-  margin: 40px auto;
-  padding: 0 16px;
+  width: 95%;
+  max-width: 750px;   /* ← максимально широко */
+  margin: 60px auto;
 }
+
 
 .orders-container h2 {
-  font-size: 2.2rem;
+  font-size: 2.6rem;
   text-align: center;
-  margin: 0 0 40px;
-  color: #1a1a1a;
-  font-weight: 600;
-  letter-spacing: -0.5px;
+  margin-bottom: 60px;
+  font-weight: 700;
+  color: #111827;
 }
 
+/* Состояния */
 .loading,
 .error {
   text-align: center;
-  padding: 100px 20px;
-  font-size: 1.3rem;
+  padding: 120px 20px;
+  font-size: 1.5rem;
   color: #555;
 }
 
 .error {
-  color: #c62828;
-  background: #ffebee;
-  border-radius: 12px;
-  padding: 24px;
-  margin: 20px 0;
+  background: #fee2e2;
+  color: #991b1b;
+  border-radius: 14px;
+  margin: 30px 0;
 }
 
 .hidden {
   display: none !important;
 }
 
-#orders-empty {
-  text-align: center;
-  font-size: 1.35rem;
-  color: #666;
-  padding: 120px 20px;
-  line-height: 1.6;
-}
+/* ─────────────────────────────────────────────
+   Карточка заказа
+───────────────────────────────────────────── */
 
-#orders-empty a {
-  color: #1976d2;
-  text-decoration: none;
-  font-weight: 600;
-  transition: color 0.2s;
-}
-
-#orders-empty a:hover {
-  color: #1565c0;
-  text-decoration: underline;
-}
-
-/* ─── Карточка заказа ────────────────────────────────────── */
 .order-card {
   background: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.07);
-  margin-bottom: 32px;
+  border-radius: 20px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+  margin-bottom: 60px;
   overflow: hidden;
-  transition: all 0.25s ease;
+  transition: all 0.3s ease;
 }
 
 .order-card:hover {
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
-  transform: translateY(-4px);
+  transform: translateY(-8px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
 }
 
-/* Шапка заказа */
+/* Шапка */
 .order-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e9ecef;
+  padding: 32px 48px;     /* ← увеличили */
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .order-header strong {
-  font-size: 1.45rem;
-  color: #212529;
+  font-size: 1.8rem;
 }
 
 .order-date {
-  color: #6c757d;
-  font-size: 0.98rem;
-  margin-left: 12px;
+  display: block;
+  margin-top: 6px;
+  font-size: 1.05rem;
+  color: #6b7280;
 }
 
+/* Статус */
 .order-status {
-  font-size: 0.95rem;
-  font-weight: 600;
-  padding: 8px 16px;
-  border-radius: 50px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  padding: 12px 28px;
+  border-radius: 999px;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
 }
 
-/* Цвета статусов — более мягкие и современные */
-.status-new         { background: #fff3cd; color: #856404; }
-.status-processing  { background: #d1e7ff; color: #0d6efd; }
-.status-shipped     { background: #d4edda; color: #0f5132; }
-.status-completed   { background: #d4edda; color: #0f5132; font-weight: 700; }
-.status-canceled    { background: #f8d7da; color: #842029; }
+/* Цвета статусов */
+.status-new         { background: #fefce8; color: #854d0e; }
+.status-processing  { background: #eff6ff; color: #1d4ed8; }
+.status-shipped     { background: #f0fdf4; color: #166534; }
+.status-completed   { background: #dcfce7; color: #14532d; }
+.status-canceled    { background: #fee2e2; color: #991b1b; }
 
-/* Список товаров */
+/* ─────────────────────────────────────────────
+   Товары
+───────────────────────────────────────────── */
+
 .order-items {
-  padding: 20px 24px;
-  background: #fff;
+  padding: 40px 60px;    /* ← стало шире */
 }
 
 .order-item-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 0;
-  border-bottom: 1px solid #f1f3f5;
-  font-size: 1.05rem;
-  color: #343a40;
+  padding: 24px 0;
+  border-bottom: 1px solid #f3f4f6;
 }
 
 .order-item-row:last-child {
   border-bottom: none;
 }
 
-.order-item-row span:first-child {
-  flex: 1;
-  font-weight: 500;
+/* Фото + название */
+.item-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 220px;        /* ← шире блок */
+  text-align: center;
 }
 
-.order-item-row span:last-child {
+.item-thumb {
+  width: 130px;        /* ← больше фото */
+  height: 130px;
+  object-fit: cover;
+  border-radius: 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+}
+
+.item-name {
+  font-size: 1.2rem;
   font-weight: 600;
-  color: #495057;
-  white-space: nowrap;
+  color: #111827;
+  line-height: 1.4;
 }
 
-/* Футер карточки */
+.item-qty-price {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+/* ─────────────────────────────────────────────
+   Футер
+───────────────────────────────────────────── */
+
 .order-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
-  background: #f8f9fa;
-  border-top: 1px solid #e9ecef;
+  padding: 36px 60px;
+  background: #f9fafb;
+  border-top: 1px solid #e5e7eb;
 }
 
 .order-total {
-  font-size: 1.4rem;
-  font-weight: 600;
-  color: #212529;
+  font-size: 1.7rem;
+  font-weight: 700;
 }
 
 .order-total strong {
-  color: #0d6efd;
-  font-size: 1.5rem;
+  font-size: 1.9rem;
+  color: #2563eb;
 }
 
-/* Кнопка отмены */
+/* Кнопка */
 .cancel-btn {
-  background: linear-gradient(135deg, #dc3545, #c82333);
+  background: linear-gradient(135deg, #ef4444, #dc2626);
   color: white;
   border: none;
-  padding: 12px 28px;
-  border-radius: 10px;
-  font-size: 1.05rem;
-  font-weight: 500;
+  padding: 16px 44px;
+  border-radius: 14px;
+  font-size: 1.2rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.22s ease;
-  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.25);
+  transition: all 0.25s ease;
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.3);
 }
 
 .cancel-btn:hover {
-  background: linear-gradient(135deg, #c82333, #bd2130);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(220, 53, 69, 0.35);
+  transform: translateY(-4px);
+  box-shadow: 0 10px 30px rgba(239, 68, 68, 0.4);
 }
 
-/* Адаптивность */
-@media (max-width: 768px) {
-  .order-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 16px 20px;
+/* ─────────────────────────────────────────────
+   Адаптивность
+───────────────────────────────────────────── */
+
+@media (max-width: 1200px) {
+  .orders-container {
+    max-width: 1200px;
+    padding: 0 24px;
   }
 
+  .order-items,
+  .order-footer,
+  .order-header {
+    padding-left: 30px;
+    padding-right: 30px;
+  }
+}
+
+@media (max-width: 768px) {
+  .order-header,
   .order-footer {
     flex-direction: column;
-    gap: 16px;
-    padding: 20px;
-  }
-
-  .cancel-btn {
-    width: 100%;
-    padding: 14px;
+    align-items: flex-start;
+    gap: 20px;
   }
 
   .order-item-row {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-    padding: 16px 0;
+    align-items: center;
+    gap: 20px;
   }
 
-  .order-total {
-    font-size: 1.35rem;
-    text-align: center;
+  .item-preview {
     width: 100%;
   }
-}
 
-@media (max-width: 480px) {
-  .orders-container h2 {
-    font-size: 1.9rem;
-  }
-
-  .order-card {
-    margin-bottom: 24px;
+  .cancel-btn {
+    width: 100%;
   }
 }
