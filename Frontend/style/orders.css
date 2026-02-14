@@ -1,0 +1,224 @@
+/* order.css — улучшенная версия */
+
+.orders-container {
+  max-width: 1100px;
+  margin: 40px auto;
+  padding: 0 16px;
+}
+
+.orders-container h2 {
+  font-size: 2.2rem;
+  text-align: center;
+  margin: 0 0 40px;
+  color: #1a1a1a;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+}
+
+.loading,
+.error {
+  text-align: center;
+  padding: 100px 20px;
+  font-size: 1.3rem;
+  color: #555;
+}
+
+.error {
+  color: #c62828;
+  background: #ffebee;
+  border-radius: 12px;
+  padding: 24px;
+  margin: 20px 0;
+}
+
+.hidden {
+  display: none !important;
+}
+
+#orders-empty {
+  text-align: center;
+  font-size: 1.35rem;
+  color: #666;
+  padding: 120px 20px;
+  line-height: 1.6;
+}
+
+#orders-empty a {
+  color: #1976d2;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+
+#orders-empty a:hover {
+  color: #1565c0;
+  text-decoration: underline;
+}
+
+/* ─── Карточка заказа ────────────────────────────────────── */
+.order-card {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.07);
+  margin-bottom: 32px;
+  overflow: hidden;
+  transition: all 0.25s ease;
+}
+
+.order-card:hover {
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+  transform: translateY(-4px);
+}
+
+/* Шапка заказа */
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.order-header strong {
+  font-size: 1.45rem;
+  color: #212529;
+}
+
+.order-date {
+  color: #6c757d;
+  font-size: 0.98rem;
+  margin-left: 12px;
+}
+
+.order-status {
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 50px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+/* Цвета статусов — более мягкие и современные */
+.status-new         { background: #fff3cd; color: #856404; }
+.status-processing  { background: #d1e7ff; color: #0d6efd; }
+.status-shipped     { background: #d4edda; color: #0f5132; }
+.status-completed   { background: #d4edda; color: #0f5132; font-weight: 700; }
+.status-canceled    { background: #f8d7da; color: #842029; }
+
+/* Список товаров */
+.order-items {
+  padding: 20px 24px;
+  background: #fff;
+}
+
+.order-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid #f1f3f5;
+  font-size: 1.05rem;
+  color: #343a40;
+}
+
+.order-item-row:last-child {
+  border-bottom: none;
+}
+
+.order-item-row span:first-child {
+  flex: 1;
+  font-weight: 500;
+}
+
+.order-item-row span:last-child {
+  font-weight: 600;
+  color: #495057;
+  white-space: nowrap;
+}
+
+/* Футер карточки */
+.order-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  background: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+}
+
+.order-total {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #212529;
+}
+
+.order-total strong {
+  color: #0d6efd;
+  font-size: 1.5rem;
+}
+
+/* Кнопка отмены */
+.cancel-btn {
+  background: linear-gradient(135deg, #dc3545, #c82333);
+  color: white;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 10px;
+  font-size: 1.05rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.22s ease;
+  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.25);
+}
+
+.cancel-btn:hover {
+  background: linear-gradient(135deg, #c82333, #bd2130);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(220, 53, 69, 0.35);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .order-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px 20px;
+  }
+
+  .order-footer {
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+  }
+
+  .cancel-btn {
+    width: 100%;
+    padding: 14px;
+  }
+
+  .order-item-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 16px 0;
+  }
+
+  .order-total {
+    font-size: 1.35rem;
+    text-align: center;
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .orders-container h2 {
+    font-size: 1.9rem;
+  }
+
+  .order-card {
+    margin-bottom: 24px;
+  }
+}

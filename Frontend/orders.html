@@ -1,10 +1,210 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <title>Title</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Мои заказы — Football Store</title>
+  <link rel="stylesheet" href="style/product.css">
+  <link rel="stylesheet" href="style/orders.css">
 </head>
 <body>
 
+<header>
+  <h1 onclick="window.location.href='index.html'">Football Store</h1>
+  <nav>
+    <a href="cart.html">Корзина</a>
+    <a href="orders.html">Мои заказы</a>
+    <a href="login.html" id="login-link">Войти</a>
+    <button id="logout-btn" onclick="logout()" style="display:none;">Выйти</button>
+  </nav>
+</header>
+
+<div class="orders-container">
+  <h2>Мои заказы</h2>
+
+  <div id="loading" class="loading">Загрузка заказов...</div>
+  <div id="error-message" class="error hidden"></div>
+  <div id="orders-empty" class="hidden">
+    У вас пока нет заказов.<br>
+    <a href="index.html">Вернуться к покупкам</a>
+  </div>
+
+  <div id="orders-list" class="hidden"></div>
+</div>
+
+<script>
+const backendUrl = "http://127.0.0.1:8000";
+
+const STATUS_MAP = {
+  'new':        'Новый',
+  'processing': 'В обработке',
+  'shipped':    'Отправлен',
+  'completed':  'Завершён',
+  'canceled':   'Отменён'
+};
+
+function showLoading(show) {
+  document.getElementById("loading").classList.toggle("hidden", !show);
+}
+
+function showError(msg) {
+  const el = document.getElementById("error-message");
+  el.textContent = msg;
+  el.classList.remove("hidden");
+  showLoading(false);
+}
+
+function showEmpty() {
+  document.getElementById("orders-empty").classList.remove("hidden");
+  showLoading(false);
+}
+
+async function loadOrders() {
+  const token = localStorage.getItem("authToken");
+  if (!token) {
+    showError("Пожалуйста, войдите в аккаунт");
+    return;
+  }
+
+  showLoading(true);
+
+  try {
+    const res = await fetch(`${backendUrl}/api/v1/order/`, {
+      headers: { "Authorization": `Token ${token}` }
+    });
+
+    if (!res.ok) {
+      let errorText = await res.text().catch(() => "Неизвестная ошибка");
+      try {
+        const errJson = JSON.parse(errorText);
+        errorText = errJson.detail || errorText;
+      } catch {}
+      showError(`Ошибка ${res.status}: ${errorText}`);
+      return;
+    }
+
+    const responseData = await res.json();
+    console.log("Ответ сервера:", responseData);
+
+    const orders = Array.isArray(responseData) ? responseData : (responseData.results || []);
+
+    showLoading(false);
+
+    if (orders.length === 0) {
+      showEmpty();
+      return;
+    }
+
+    const list = document.getElementById("orders-list");
+    list.innerHTML = "";
+    list.classList.remove("hidden");
+
+    orders.forEach(order => {
+      const card = document.createElement("div");
+      card.className = "order-card";
+
+      const date = new Date(order.created_at).toLocaleString("ru-RU", {
+        day: "2-digit", month: "2-digit", year: "numeric",
+        hour: "2-digit", minute: "2-digit"
+      });
+
+      const statusText = STATUS_MAP[order.status] || order.status;
+      const statusClass = `status-${order.status}`;
+
+      let itemsHtml = (order.items || []).map(item => {
+        const name = item.product_name || "Товар удалён из каталога";
+        const imgSrc = item.product_image || "https://via.placeholder.com/90x90?text=Нет+фото";
+
+        const qty = item.quantity;
+        const priceFormatted = Number(item.price).toLocaleString('ru-RU', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
+
+        return `
+          <div class="order-item-row">
+            <div class="item-preview">
+              <img src="${imgSrc}"
+                   alt="${name}"
+                   class="item-thumb"
+                   loading="lazy"
+                   onerror="this.src='https://via.placeholder.com/90?text=Нет+фото'">
+              <div class="item-info">
+                <span class="item-name">${name}</span>
+              </div>
+            </div>
+            <div class="item-qty-price">
+              ${qty} × ${priceFormatted} ₽
+            </div>
+          </div>
+        `;
+      }).join("") || '<p class="no-items">В заказе нет товаров</p>';
+
+      let cancelBtn = "";
+      if (["new", "processing"].includes(order.status)) {
+        cancelBtn = `<button class="cancel-btn" onclick="cancelOrder(${order.id})">Отменить заказ</button>`;
+      }
+
+      card.innerHTML = `
+        <div class="order-header">
+          <div>
+            <strong>Заказ №${order.id}</strong>
+            <span class="order-date">${date}</span>
+          </div>
+          <span class="order-status ${statusClass}">${statusText}</span>
+        </div>
+
+        <div class="order-items">
+          ${itemsHtml}
+        </div>
+
+        <div class="order-footer">
+          <div class="order-total">
+            Итого: <strong>${Number(order.total_price).toLocaleString('ru-RU', {minimumFractionDigits: 2})} ₽</strong>
+          </div>
+          ${cancelBtn}
+        </div>
+      `;
+
+      list.appendChild(card);
+    });
+
+  } catch (err) {
+    console.error("Ошибка загрузки:", err);
+    showError("Не удалось загрузить заказы. Проверьте соединение или авторизацию.");
+  }
+}
+
+async function cancelOrder(orderId) {
+  if (!confirm("Отменить заказ?")) return;
+
+  const token = localStorage.getItem("authToken");
+  if (!token) return;
+
+  try {
+    const res = await fetch(`${backendUrl}/api/v1/order/${orderId}/cancel/`, {
+      method: "POST",
+      headers: { "Authorization": `Token ${token}` }
+    });
+
+    if (res.ok) {
+      alert("Заказ успешно отменён");
+      loadOrders();
+    } else {
+      let errData = await res.json().catch(() => ({}));
+      alert(errData.detail || "Не удалось отменить заказ");
+    }
+  } catch (err) {
+    alert("Ошибка сети");
+    console.error(err);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  loadOrders();
+});
+</script>
+
+<script src="js/auth.js" defer></script>
 </body>
 </html>
