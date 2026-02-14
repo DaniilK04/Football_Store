@@ -33,22 +33,45 @@ class ProductSerializer(serializers.ModelSerializer):
 class OrderItemReadSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
     product_slug = serializers.CharField(source='product.slug', read_only=True)
+    product_image = serializers.ImageField(source='product.image', read_only=True)
 
     class Meta:
         model = OrderItem
-        fields = ['id', 'product_name', 'product_slug', 'quantity', 'price', 'total_price']
+        fields = [
+            'id',
+            'product_name',
+            'product_slug',
+            'product_image',
+            'quantity',
+            'price',
+            'total_price'
+        ]
         read_only_fields = fields
 
 
+
 class OrderReadSerializer(serializers.ModelSerializer):
-    items = OrderItemReadSerializer(many=True, read_only=True)
+    items = OrderItemReadSerializer(
+        source='order_items',   # 👈 ВАЖНО
+        many=True,
+        read_only=True
+    )
     username = serializers.CharField(source='user.username', read_only=True)
     total_price = serializers.DecimalField(max_digits=13, decimal_places=2, read_only=True)
 
     class Meta:
         model = Order
-        fields = ['id', 'username', 'status', 'total_price', 'created_at', 'updated_at', 'items']
+        fields = [
+            'id',
+            'username',
+            'status',
+            'total_price',
+            'created_at',
+            'updated_at',
+            'items'
+        ]
         read_only_fields = fields
+
 
 
 class OrderAdminUpdateSerializer(serializers.ModelSerializer):
